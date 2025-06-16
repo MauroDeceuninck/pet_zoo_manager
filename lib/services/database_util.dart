@@ -76,11 +76,11 @@ class DatabaseUtil {
   }
 
   // Task operations
-  static Future<List<Map<String, dynamic>>> getTasks(int animalId) async {
+  static Future<List<Map<String, dynamic>>> getTasks(String animalId) async {
     return await _database.query(
       'tasks',
       where: 'animal_id = ?',
-      whereArgs: [animalId],
+      whereArgs: [int.tryParse(animalId) ?? -1], // fallback if parsing fails
     );
   }
 

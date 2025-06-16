@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'services/database_util.dart';
+import 'services/api_util.dart';
 
 class DetailPage extends StatefulWidget {
   final String name;
   final String species;
-  final int animalId;
+  final String animalId;
   final VoidCallback onDelete;
+
+  final bool useApi;
 
   const DetailPage({
     super.key,
@@ -13,6 +16,7 @@ class DetailPage extends StatefulWidget {
     required this.species,
     required this.animalId,
     required this.onDelete,
+    required this.useApi,
   });
 
   @override
@@ -29,26 +33,43 @@ class _DetailPageState extends State<DetailPage> {
   }
 
   void _loadTasks() async {
-    var data = await DatabaseUtil.getTasks(widget.animalId);
-    setState(() {
-      tasks = List<Map<String, dynamic>>.from(data);
-    });
+    if (widget.useApi) {
+      var data = await ApiUtil.fetchTasks(widget.animalId);
+      setState(() => tasks = List<Map<String, dynamic>>.from(data));
+    } else {
+      var data = await DatabaseUtil.getTasks(widget.animalId);
+      setState(() => tasks = List<Map<String, dynamic>>.from(data));
+    }
   }
 
   void _toggleTask(int index) async {
-    var original = tasks[index];
-    var task = Map<String, dynamic>.from(original);
-    task['done'] = task['done'] == 1 ? 0 : 1;
-    await DatabaseUtil.updateTask(task);
+    final original = tasks[index];
+    final updated = Map<String, dynamic>.from(original);
+    updated['done'] = original['done'] == 1 ? 0 : 1;
+
+    if (widget.useApi) {
+      await ApiUtil.updateTask(
+        updated['id'],
+        updated['description'],
+        updated['done'] == 1,
+      );
+    } else {
+      await DatabaseUtil.updateTask(updated);
+    }
+
     _loadTasks();
   }
 
   void _addTask(String description) async {
-    await DatabaseUtil.insertTask({
-      'animal_id': widget.animalId,
-      'description': description,
-      'done': 0,
-    });
+    if (widget.useApi) {
+      await ApiUtil.addTask(widget.animalId, description);
+    } else {
+      await DatabaseUtil.insertTask({
+        'animal_id': int.tryParse(widget.animalId) ?? 0,
+        'description': description,
+        'done': 0,
+      });
+    }
     _loadTasks();
   }
 
